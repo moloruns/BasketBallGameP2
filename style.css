@@ -1,0 +1,146 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #14161c;
+  color: #f2f2f2;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Keep the court's aspect ratio (1082 x 598) while fitting the window */
+#app {
+  width: min(96vw, calc((100vh - 110px) * 1.8094));
+}
+
+#hud {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 4px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  background: #1f232c;
+  border-radius: 8px;
+  padding: 6px 0;
+}
+
+.label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9aa3b2;
+}
+
+.stat span:last-child {
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+#stage {
+  position: relative;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  cursor: crosshair;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 12, 16, 0.65);
+  border-radius: 10px;
+}
+
+.hidden { display: none !important; }
+
+.card {
+  background: #1f232c;
+  border-radius: 14px;
+  padding: 28px 36px;
+  max-width: 460px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.card h1 {
+  margin: 0 0 12px;
+  font-size: 34px;
+  color: #ff8c2b;
+}
+
+.card p { line-height: 1.45; }
+
+.small { font-size: 14px; color: #9aa3b2; }
+
+.zones {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0;
+  text-align: left;
+}
+
+.zones li { margin: 8px 0; }
+
+.chip {
+  display: inline-block;
+  width: 46px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 0;
+  border-radius: 4px;
+  margin-right: 8px;
+  color: #111;
+  background: #4fb3ff;
+}
+
+.results {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin: 18px 0 8px;
+}
+
+.results div {
+  display: flex;
+  flex-direction: column;
+}
+
+.results span:last-child {
+  font-size: 44px;
+  font-weight: 800;
+}
+
+button {
+  margin-top: 10px;
+  background: #ff8c2b;
+  color: #111;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover { background: #ffa04f; }

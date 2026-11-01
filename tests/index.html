@@ -14,6 +14,11 @@
       <div class="stat"><span class="label">High Score</span><span id="high">0</span></div>
     </header>
 
+    <div id="feedback-bar">
+      <div id="shot-feedback" role="status" aria-live="polite">Shoot at the left hoop · Release near the white line</div>
+      <button id="mute-button" type="button" aria-label="Mute sound" aria-pressed="false">Sound: on</button>
+    </div>
+
     <div id="stage">
       <canvas id="court"></canvas>
 
@@ -53,6 +58,8 @@
   <script src="../js/player.js"></script>
   <script src="../js/meter.js"></script>
   <script src="../js/state.js"></script>
+  <script src="../js/audio.js"></script>
+  <script src="../js/ball.js"></script>
   <script src="../js/ui.js"></script>
   <script src="../js/main.js"></script>
 <script src="checks.js"></script></body>

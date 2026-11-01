@@ -40,3 +40,6 @@ const PLAYER = {
 
 const ROUND_SECONDS = 60;
 const RESULT_SHOW_SECONDS = 1.2;   // how long "MAKE" / "MISS" stays on screen
+
+// Cosmetic flights do not delay shooting or score points on arrival.
+const BALL = { MIN_FLIGHT_MS: 550, EXTRA_FLIGHT_MS: 500, FINISH_MS: 550, MAX_ARC_PX: 100, RADIUS_PX: 7, MAX_FLIGHTS: 12 };

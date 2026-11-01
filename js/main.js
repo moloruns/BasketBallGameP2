@@ -6,11 +6,12 @@ canvas.width = Court.width;
 canvas.height = Court.height;
 const ctx = canvas.getContext('2d');
 
-let lastResult = null;   // { text, color, age } for the "MAKE" / "MISS" message
+let lastResult = null;   // { text, color, startMs } for the "MAKE" / "MISS" message
 
 function handleClick(now = performance.now()) {
   if (GameState.tick(now)) endRound();
   if (!GameState.isPlaying()) return;
+  Sound.unlock();
   if (Meter.isActive()) {
     resolveShot(Meter.stop(now), now);
   } else {
@@ -25,20 +26,22 @@ function resolveShot(result, now = performance.now()) {
   if (!result || !GameState.isPlaying()) return;
   Player.setFrozen(false);
   if (result.made) GameState.addPoints(result.points);
+  Ball.launch(result, Player.position, now);
+  Sound.play('release');
   lastResult = result.made
-    ? { text: `MAKE +${result.points}`, color: '#ffd23f', age: 0 }
-    : { text: 'MISS', color: '#ff5a4f', age: 0 };
+    ? { text: `MAKE +${result.points}`, color: '#ffd23f', startMs: now }
+    : { text: 'MISS', color: '#ff5a4f', startMs: now };
 }
 
 function update(dt, now) {
+  Ball.update(now);
   if (GameState.tick(now)) endRound();
   if (GameState.isPlaying()) {
     Player.update(dt);
     if (Meter.isActive() && Meter.isFull(now)) resolveShot(Meter.stop(now), now);
   }
   if (lastResult) {
-    lastResult.age += dt;
-    if (lastResult.age > RESULT_SHOW_SECONDS) lastResult = null;
+    if (now - lastResult.startMs > RESULT_SHOW_SECONDS * 1000) lastResult = null;
   }
 }
 
@@ -47,36 +50,35 @@ function startRound(now = performance.now()) {
   lastFrameMs = now;
   Player.reset();
   Meter.cancel();
+  Ball.clear();
+  Sound.stopAll();
   lastResult = null;
   Ui.hideScreens();
+  Ui.showResult(null);
+  Ui.updateHud();
 }
 
 // A shot whose meter is still filling at the buzzer is thrown away and scores nothing.
 function endRound() {
   Meter.cancel();
   Player.setFrozen(false);
+  Sound.stopAll();
+  Sound.play('buzzer');
   Ui.showEndScreen();
+  Ui.updateHud();
 }
 
 function render(now) {
   Court.draw(ctx);
   Player.draw(ctx);
+  Ball.draw(ctx, now);
   if (Meter.isActive()) Meter.draw(ctx, now, Player.position);
-  if (lastResult) drawResult();
+  drawResult();
   Ui.updateHud();
 }
 
 function drawResult() {
-  const x = Court.toPx(22);
-  const y = Court.toPx(10);
-  ctx.font = 'bold 40px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
-  ctx.strokeText(lastResult.text, x, y);
-  ctx.fillStyle = lastResult.color;
-  ctx.fillText(lastResult.text, x, y);
+  Ui.showResult(lastResult);
 }
 
 let lastFrameMs = performance.now();
@@ -89,5 +91,6 @@ function frame(now) {
 }
 
 Player.attachInput(canvas, handleClick);
-Ui.onStart(() => startRound());
+Ui.onStart(() => { Sound.unlock(); startRound(); });
+Ui.onMute(() => { Sound.unlock(); Sound.setMuted(!Sound.muted); Ui.updateMute(); });
 requestAnimationFrame(frame);

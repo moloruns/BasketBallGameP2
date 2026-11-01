@@ -12,6 +12,8 @@ const Ui = (() => {
     finalHigh: document.getElementById('final-high'),
     startButton: document.getElementById('start-button'),
     againButton: document.getElementById('again-button'),
+    feedback: document.getElementById('shot-feedback'),
+    muteButton: document.getElementById('mute-button'),
   };
 
   function onStart(callback) {
@@ -37,5 +39,17 @@ const Ui = (() => {
     el.endScreen.classList.remove('hidden');
   }
 
-  return { onStart, updateHud, hideScreens, showEndScreen };
+  function showResult(result) {
+    const message = result ? result.text : 'Shoot at the left hoop · Release near the white line';
+    if (el.feedback.textContent !== message) el.feedback.textContent = message;
+    el.feedback.style.color = result ? result.color : '';
+  }
+
+  function onMute(callback) { el.muteButton.addEventListener('click', callback); }
+  function updateMute() {
+    el.muteButton.textContent = Sound.muted ? 'Sound: off' : 'Sound: on';
+    el.muteButton.setAttribute('aria-pressed', String(Sound.muted));
+  }
+
+  return { onStart, updateHud, hideScreens, showEndScreen, showResult, onMute, updateMute };
 })();

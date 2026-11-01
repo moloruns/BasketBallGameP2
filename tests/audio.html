@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Buzzer Beater audio fallback checks</title></head><body>
+<h1>Audio fallback checks</h1><pre id="test-results">Running…</pre>
+<script>
+let audioFailure=false;
+const audioEvents=[];
+let audioContextFake;
+const originalAudioContext=window.AudioContext, originalWebkitAudioContext=window.webkitAudioContext;
+window.AudioContext=undefined;window.webkitAudioContext=undefined;
+</script>
+<script src="../js/audio.js"></script>
+<script>
+const audioResults=[];
+function test(name,fn){try{fn();audioResults.push('PASS '+name);}catch(e){audioFailure=true;audioResults.push('FAIL '+name+': '+e.message);}}
+function assert(value,message){if(!value)throw new Error(message);}
+test('No Web Audio support safely plays silently',()=>{Sound.unlock();Sound.play('make');Sound.setMuted(true);Sound.setMuted(false);});
+test('Blocked audio creation safely plays silently',()=>{window.AudioContext=function(){throw new Error('blocked');};Sound.unlock();Sound.play('release');});
+function FakeAudioContext(){
+  this.state='suspended';this.currentTime=0;this.destination={};audioContextFake=this;
+  this.resume=()=>Promise.reject(new Error('permission denied'));
+  const param=()=>({value:0,setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}});
+  this.createGain=()=>({gain:param(),connect(){},disconnect(){}});
+  this.createOscillator=()=>({frequency:param(),connect(){},disconnect(){},start(){audioEvents.push('start');},stop(){audioEvents.push('stop');}});
+}
+test('Rejected resume promise does not interrupt gameplay',()=>{window.AudioContext=FakeAudioContext;Sound.unlock();Sound.play('make');assert(audioEvents.length===0,'suspended context played');});
+test('Running context schedules release, make, miss and buzzer effects',()=>{audioContextFake.state='running';for(const kind of ['release','make','miss','buzzer'])Sound.play(kind);assert(audioEvents.filter(e=>e==='start').length===5,'missing effects');});
+test('Mute stops active voices and prevents new effects',()=>{Sound.setMuted(true);const count=audioEvents.length;Sound.play('make');assert(audioEvents.length===count,'played while muted');Sound.setMuted(false);Sound.play('release');assert(audioEvents.length>count,'unmute failed');Sound.stopAll();});
+Promise.resolve().then(()=>{document.getElementById('test-results').textContent=audioResults.join('\n')+'\n\n'+(audioFailure?'FAILED':'5/5 checks passed.');document.body.dataset.testStatus=audioFailure?'failed':'passed';});
+</script></body></html>

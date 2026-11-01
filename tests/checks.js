@@ -130,6 +130,78 @@ test('Three button restarts clear state without adding loops or duplicate listen
   equal(window.testFrameRequests,count,'restart created an animation loop');
 });
 
+test('Flight copies release position, arcs, and never awards points on arrival', () => {
+  fresh(); const start={x:60,y:25};
+  const flight=Ball.launch({made:true,fill:.9},start,1000);
+  const origin={...flight.start}; start.x=5;
+  equal(flight.start.x,origin.x,'copied release x');
+  const mid=Ball.pose(flight,1000+flight.durationMs/2);
+  assert(mid.lift>0 && mid.x<origin.x && mid.x>HOOP.X_FT,'arc to left hoop');
+  const arrival=Ball.pose(flight,1000+flight.durationMs);
+  equal(arrival.x,HOOP.X_FT,'arrival x'); equal(arrival.y,HOOP.Y_FT,'arrival y');
+  Ball.update(1000+flight.durationMs+BALL.FINISH_MS+1);
+  equal(Ball.count,0,'cleanup'); equal(GameState.score,0,'cosmetics cannot score');
+});
+
+test('Make drops through rim; miss bounces away; both fade', () => {
+  fresh();
+  const make=Ball.launch({made:true,fill:.9},Player.position,1000);
+  const miss=Ball.launch({made:false,fill:.4},Player.position,1000);
+  const a=Ball.pose(make,1000+make.durationMs+BALL.FINISH_MS/2);
+  const b=Ball.pose(miss,1000+miss.durationMs+BALL.FINISH_MS/2);
+  equal(a.x,HOOP.X_FT,'make stays at rim'); assert(a.y>HOOP.Y_FT,'drop');
+  assert(b.x>miss.target.x && b.lift>0,'bounce');
+  equal(a.alpha,.5,'make fades'); equal(b.alpha,.5,'miss fades');
+});
+
+test('Flights are bounded, allow another shot immediately, and clear on restart', () => {
+  fresh(); handleClick(1000); handleClick(2350);
+  equal(Ball.count,1,'visual flight'); assert(!Meter.isActive(),'ready for another shot');
+  handleClick(2351); assert(Meter.isActive(),'next shot before previous arrival');
+  for(let i=0;i<30;i++) Ball.launch({made:false,fill:.2},Player.position,2400+i);
+  equal(Ball.count,BALL.MAX_FLIGHTS,'bounded pool'); fresh(); equal(Ball.count,0,'reset clears');
+});
+
+test('Buzzer does not wait for flight; visual finish cannot alter final score', () => {
+  fresh(); handleClick(59649); handleClick(60999);
+  equal(GameState.score,3,'release before buzzer'); equal(Ball.count,1,'still flying');
+  advance(61000); assert(!GameState.isPlaying(),'end on time');
+  advance(65000); equal(GameState.score,3,'no arrival score'); equal(Ball.count,0,'old flights gone');
+});
+
+test('Mute button preserves preference across restart and gameplay works muted', () => {
+  fresh(); Sound.setMuted(false); Ui.updateMute();
+  document.getElementById('mute-button').click(); assert(Sound.muted,'mute');
+  assert(document.getElementById('mute-button').getAttribute('aria-pressed')==='true','accessible state');
+  fresh(); assert(Sound.muted,'preference survives restart');
+  handleClick(1000); handleClick(2350); equal(GameState.score,3,'silent play');
+  document.getElementById('mute-button').click(); assert(!Sound.muted,'unmute');
+});
+
+test('Scaled canvas input and meter drawing remain inside all court edges', () => {
+  fresh(); const app=document.getElementById('app'); const oldWidth=app.style.width; app.style.width='420px';
+  move(60,35); Player.update(1);
+  assert(Math.abs(Player.position.x-60)<.3 && Math.abs(Player.position.y-35)<.3,'scaled input');
+  for(const [x,y] of [[1.3,1.3],[92.7,1.3],[1.3,48.7],[92.7,48.7]]) {
+    Meter.start(ZONES.TWO,1000); Meter.draw(ctx,2000,{x,y});
+    // Intercept the bar outline to verify its actual rendered bounds.
+    const rects=[]; const original=ctx.strokeRect;
+    ctx.strokeRect=(...args)=>rects.push(args); Meter.draw(ctx,2000,{x,y}); ctx.strokeRect=original;
+    const [left,top,width,height]=rects[0];
+    assert(left>=0 && top>=0 && left+width<=canvas.width && top+height<=canvas.height,'meter bounds');
+  }
+  Meter.cancel(); app.style.width=oldWidth;
+});
+
+test('Result feedback has reserved space outside the court', () => {
+  fresh(); handleClick(1000); handleClick(2350); render(2350);
+  assert(document.getElementById('shot-feedback').textContent==='MAKE +3','make feedback');
+  const feedback=document.getElementById('feedback-bar').getBoundingClientRect();
+  const court=canvas.getBoundingClientRect(); assert(feedback.bottom<=court.top,'feedback overlaps court');
+  advance(4000); render(4000);
+  assert(!document.getElementById('shot-feedback').textContent.includes('MAKE'),'stale message');
+});
+
 const report=document.createElement('pre'); report.id='test-results';
 report.textContent=testResults.join('\n')+`\n\n${testResults.length-testFailures}/${testResults.length} checks passed.`;
 document.body.append(report); document.body.dataset.testStatus=testFailures?'failed':'passed';

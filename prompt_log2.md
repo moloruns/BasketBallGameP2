@@ -73,3 +73,9 @@ Implemented. Before starting or replaying, choose:
 Your choice carries between rounds. All modes use the same scoring and timing rules.
 
 **30 gameplay checks pass.** Saved locally in commit `7dfa19d`; push remains pending GitHub authentication. Spec and prompt logs untouched.
+
+>>
+Don't specifically use LMB (as some may not know it stands for left mouse button). Instead could use "hold mouse button"
+
+>>>
+Replaced “LMB” with “mouse button” in the selector, gameplay hint, and documentation. Controls now say **“Hold mouse button to charge.”**

@@ -1,10 +1,12 @@
 # Buzzer Beater
 
+**Original author: Atin Mathur** ([atinm12](https://github.com/atinm12)). Phase 2 extends the inherited game from baseline `4055f49` in [BasketBallGameP2](https://github.com/moloruns/BasketBallGameP2).
+
 A top-down basketball shooting game that runs in a web browser. Walk a player around the court with the mouse, click to start a shot meter, and click again as close to the 90% line as you can. You have 60 seconds to score as many points as possible.
 
 `SPEC.md` is the source of truth for what the game should do. This README describes what the code does **right now**.
 
-**Status:** SPEC priorities 1–4 are built and working: the core shot loop, the 2/3/4 point zones, the 60-second timer and score, and the end screen with the session high score. Priority 5 (polish: sound, ball arc animation, make/miss effects) is **not built**.
+**Status:** All five SPEC priorities are implemented. Phase 2 fixes elapsed-time deadlines and restart input, adds ball arcs, make/miss finishes, synthesized sound with mute, and moves shot feedback above the court. Saved browser checks pass: **21 game checks + 5 audio checks**. Browser coverage and remaining human checks are described below.
 
 ---
 
@@ -13,19 +15,20 @@ A top-down basketball shooting game that runs in a web browser. Walk a player ar
 There are no dependencies, build step, or installs.
 
 **Option A: open the file (simplest)**
-1. Get the code: `git clone https://github.com/atinm12/BasketBallGame.git`, or download the ZIP from GitHub and unzip it.
+
+1. Get the code: `git clone https://github.com/moloruns/BasketBallGameP2.git`, or download the ZIP from GitHub and unzip it.
 2. Double-click `index.html`, or drag it into a browser window.
 
 **Option B: serve it locally** (handy if you want the browser dev tools on `localhost`)
 ```bash
-cd BasketBallGame
+cd BasketBallGameP2
 python3 -m http.server 8000
 ```
 Then open http://localhost:8000.
 
 **Requirements:** a desktop browser and a mouse. Touch is not supported (see Known bugs and traps).
 
-**Where it has been tested:** only Google Chrome, both opened from `file://` and served from `localhost`. Safari, Firefox, and Edge have **not** been tested. The code uses `CanvasRenderingContext2D.roundRect`, which needs a reasonably recent browser (Chrome 99+, Safari 16+, Firefox 112+).
+**Where it has been tested:** Chrome headless, both direct `file://` and local HTTP. Automated input checks and screenshot inspection cover gameplay and layout; this is not a claim of a human playthrough. Safari automation could not start because “Allow remote automation” is disabled. Firefox is not installed; Safari, Firefox, and Edge remain unverified. A current desktop browser with Canvas `roundRect` and, optionally, Web Audio is required. Audio scheduling and failure handling were tested with mocks; a human should still audition the sound levels.
 
 ---
 
@@ -37,12 +40,14 @@ Then open http://localhost:8000.
 | Move | Move the mouse over the court. The player follows it. |
 | Start a shot | Left-click on the court. The shot meter appears next to the player. |
 | Shoot | Left-click again while the meter is filling. |
+| Mute/unmute | Click **Sound: on/off** above the court. The setting survives round restarts. |
 
 **What a player needs to know**
+
 - The meter is a vertical bar that fills from bottom to top. The white line is at **90%**.
 - **Make window:** stopping the bar anywhere from **85% to 95%** (inclusive) is a make. Below 85% or above 95% is a miss.
 - If the bar fills all the way without a second click, it's a **miss**.
-- After each shot, **MAKE +N** or **MISS** appears near the top-left of the court for about a second.
+- After each shot, **MAKE +N** or **MISS** appears in a reserved bar above the court for about a second.
 - Shot value depends on where you're standing **when you click to start the meter**:
 
   | Where | Points | Meter fill time |
@@ -54,48 +59,50 @@ Then open http://localhost:8000.
 - You always shoot at the **left** hoop. The right hoop is dimmed and does nothing.
 - You can't move while the meter is filling. You can move again as soon as the shot is decided.
 - The 60-second clock **keeps running** while the meter fills, so slow shots cost time.
-- If time runs out while the meter is still filling, that shot is **thrown away** and scores nothing.
+- A shot released **before** the deadline scores immediately, even if its ball is still flying when the buzzer sounds. At or after the deadline, releases score nothing. An unfinished meter is discarded.
+- The clock and meter use the same elapsed-time source. They keep counting when the tab is hidden; the next available frame or click reconciles the deadline. A suspended browser cannot render the end screen until it resumes.
+- Flying balls are cosmetic. You can immediately move or start another shot; a new held ball appears immediately. The results screen never waits for flight to finish.
 - The high score lasts while the page is open. **Reloading or closing the page resets it to 0.**
 
 ---
 
 ## Acceptance criteria status
 
-Every criterion from `SPEC.md`, checked against the current code (commit `3b99bc3`) in Chrome. Testing method: scripted checks run in the browser console, which call the game's functions and dispatch mouse events. Movement, starting a round, the meter, and freezing during the meter were also checked with real mouse clicks. Opening from `file://` was checked in headless Chrome. **There are no automated tests in the repo**, so these checks have to be re-run by hand (see "Testing it yourself").
+Every numbered criterion from `SPEC.md` is assessed below using the saved browser checks, source inspection, and Chrome screenshots. “Met” describes implemented behavior with this evidence, not coverage of every browser. Rules are checked with controlled timestamps and synthetic mouse/button events.
 
 | # | Criterion (short form) | Status | Notes |
 |---|---|---|---|
-| 1 | Opening `index.html` shows a top-down court with three-point and half-court lines | **Met** | Verified in Chrome only. The start screen sits over the court until you click Start Round. |
-| 2 | Moving the mouse moves the player to follow it | **Met** | The player eases toward the mouse; it doesn't snap. |
-| 3 | The player can't be moved off the court | **Met** | Clamped so the player's whole body stays inside the boundary. |
-| 4 | Clicking while moving starts the meter and the player stops | **Met** | |
-| 5 | The meter is a vertical rectangle filling bottom to top | **Met** | |
-| 6 | Target line visible at 90% | **Met** | |
-| 7 | Moving the mouse during the meter doesn't move the player | **Met** | |
-| 8 | A second click stops the meter and resolves make/miss | **Met** | |
-| 9 | 85%–95% inclusive is a make | **Met** | Checked at exactly 0.85, 0.90 and 0.95. |
-| 10 | Below 85% is a miss | **Met** | Checked at 0.849. |
-| 11 | Above 95% is a miss | **Met** | Checked at 0.951. |
-| 12 | Bar fills to 100% with no second click → miss | **Met** | |
-| 13 | Make/miss is shown, and the player can move and shoot again | **Met** | |
-| 14 | Inside the arc = 2 points, 3.0 s fill | **Met** | |
-| 15 | On or outside the arc, on the hoop's side of half court = 3 points, 1.5 s fill | **Met** | Includes corner threes. Standing exactly on the half-court line counts as 3. |
-| 16 | Beyond half court = 4 points, 0.5 s fill | **Met** | |
-| 17 | The zone is fixed when the meter starts | **Met** | |
-| 18 | Score starts at 0 each round | **Met** | |
-| 19 | A make adds exactly its zone's points; a miss adds 0 | **Met** | |
-| 20 | Score visible at all times during a round | **Met** | In the bar above the court. |
-| 21 | Rounds last 60 s, and the time left is always visible | **Met** | See the timer trap under Known bugs and traps. |
-| 22 | The clock keeps counting during the meter | **Met** | |
-| 23 | At 0 the round ends and the end screen appears | **Met** | |
-| 24 | The end screen shows the round score | **Met** | |
-| 25 | The end screen shows the session high score | **Met** | |
-| 26 | A higher score updates the high score | **Met** | |
-| 27 | A score that isn't higher leaves the high score alone | **Met** | |
-| 28 | You can start a new round from the end screen, and the high score carries over | **Met** | |
-| 29 | Reloading resets the high score to 0 | **Met** | |
+| 1 | Opening `index.html` shows a top-down court with three-point and half-court lines | **Met** | Chrome screenshots show the full court and start overlay; other browsers unverified. |
+| 2 | Moving the mouse moves the player to follow it | **Met** | Synthetic mouse events exercise following and CSS coordinate scaling. |
+| 3 | The player can't be moved off the court | **Met** | Bounds assertions and unchanged clamp implementation. |
+| 4 | Clicking while moving starts the meter and the player stops | **Met** | Mouse click starts the meter; subsequent movement stays frozen. |
+| 5 | The meter is a vertical rectangle filling bottom to top | **Met** | Meter drawing inspected: fill rectangle grows upward. |
+| 6 | Target line visible at 90% | **Met** | Drawing uses `METER.TARGET = 0.90` for the white line. |
+| 7 | Moving the mouse during the meter doesn't move the player | **Met** | Mouse movement during an active meter leaves position unchanged. |
+| 8 | A second click stops the meter and resolves make/miss | **Met** | Second synthetic click resolves; repeated `Meter.stop()` returns null. |
+| 9 | 85%–95% inclusive is a make | **Met** | Assertions at exactly 0.85, 0.90, and 0.95. |
+| 10 | Below 85% is a miss | **Met** | Assertion at 0.849. |
+| 11 | Above 95% is a miss | **Met** | Assertion at 0.951. |
+| 12 | Bar fills to 100% with no second click → miss | **Met** | All three zones tested at full fill; update auto-resolves as MISS. |
+| 13 | Make/miss is shown, and the player can move and shoot again | **Met** | Feedback text, restored movement, and immediate next shot checked. |
+| 14 | Inside the arc = 2 points, 3.0 s fill | **Met** | Zone, points, and 3.0-second duration checked. |
+| 15 | On or outside the arc, on the hoop's side of half court = 3 points, 1.5 s fill | **Met** | Arc/corner boundaries and 1.5-second duration checked; exactly half court is 3. |
+| 16 | Beyond half court = 4 points, 0.5 s fill | **Met** | Beyond-half-court boundary and 0.5-second duration checked. |
+| 17 | The zone is fixed when the meter starts | **Met** | Mouse movement during filling cannot change the captured zone. |
+| 18 | Score starts at 0 each round | **Met** | Repeated starts assert score 0 and time 60. |
+| 19 | A make adds exactly its zone's points; a miss adds 0 | **Met** | All zone awards, misses, and no extra points on later frames/ball arrival checked. |
+| 20 | Score visible at all times during a round | **Met** | HUD above the canvas in screenshots; score updates each render. |
+| 21 | Rounds last 60 s, and the time left is always visible | **Met** | 60-second deadline tested at 60 FPS, 5 FPS, and a 60-second stall; HUD inspected. |
+| 22 | The clock keeps counting during the meter | **Met** | Active meter and countdown advance on the same timestamps. |
+| 23 | At 0 the round ends and the end screen appears | **Met** | Deadline/click checks assert OVER, canceled meter, and visible end screen. |
+| 24 | The end screen shows the round score | **Met** | End-screen text asserted against the completed round score. |
+| 25 | The end screen shows the session high score | **Met** | End-screen high-score text asserted against session best. |
+| 26 | A higher score updates the high score | **Met** | Higher scores update the best in sequence tests. |
+| 27 | A score that isn't higher leaves the high score alone | **Met** | Equal and lower scores leave the best unchanged. |
+| 28 | You can start a new round from the end screen, and the high score carries over | **Met** | Three Play Again cycles preserve best and clear shot/score state without extra loops. |
+| 29 | Reloading resets the high score to 0 | **Met** | Each fresh test-page load asserts zero; state is memory-only, with no persistence. |
 
-Not an acceptance criterion, but in the spec's feature list: the **polish features are not built** (sound, ball arc animation, make/miss effects).
+**Polish (separate from criteria 1–29):** ball flight arcs from a captured release position with a ground shadow; makes drop through the rim with a short net/glow effect, and misses bounce away. Flights fade, are capped at 12, and clear on restart. Release, make, miss, and buzzer tones are synthesized locally; audio initializes after interaction, supports mute, bounds simultaneous voices, and fails silently if unavailable. Impact sounds follow the visual arrival without awarding points. The audio harness covers unavailable/blocked APIs, scheduling, and mute; audible quality still needs a human check.
 
 ---
 
@@ -106,14 +113,17 @@ Plain HTML, CSS and JavaScript. No framework, bundler, or ES modules. The JS fil
 | File | Responsible for |
 |---|---|
 | `SPEC.md` | What the game should do: features, acceptance criteria, priorities. |
-| `index.html` | Page structure: score/time/high score bar, the canvas, start and end screens, and script load order. |
+| `index.html` | Page structure: score/time/high score bar, the canvas, start and end screens, sound/feedback controls, and script load order. |
 | `style.css` | Layout and styling. Keeps the court's aspect ratio as the window resizes. |
-| `js/constants.js` | **All tunable values:** court size and scale, hoop position, three-point distances, zone points and fill times (`ZONES`), target line and make window (`METER`), player size and follow speed, `ROUND_SECONDS`, and how long the result message shows. |
+| `js/constants.js` | **Core tunable values:** court size and scale, hoop position, three-point distances, zone points and fill times (`ZONES`), target line and make window (`METER`), player size and follow speed, `ROUND_SECONDS`, result-message duration, and ball-flight settings. |
 | `js/court.js` | `Court`: feet ↔ pixel conversion, drawing the court, and zone detection. |
 | `js/player.js` | `Player`: mouse tracking, moving and clamping the player, freezing during a shot, and drawing the player. |
 | `js/meter.js` | `Meter`: the shot meter's timing, make/miss decision, and drawing. |
 | `js/state.js` | `GameState`: round phase, countdown clock, score, and session high score. |
-| `js/ui.js` | `Ui`: updating the HTML score bar and showing or hiding the start and end screens. |
+| `js/ball.js` | `Ball`: bounded cosmetic flights, arcs, shadows, rim finishes, and cleanup. |
+| `js/audio.js` | `Sound`: optional synthesized effects, user-gesture unlock, mute, and voice cleanup. |
+| `tests/` | Browser regression harness, isolated audio checks, and a deterministic flight preview. |
+| `js/ui.js` | `Ui`: updating the HTML score/feedback bars, mute control, and start/end screens. |
 | `js/main.js` | Entry point: canvas setup, the click → meter → result flow, round start and end, and the game loop. |
 
 ### Major functions
@@ -130,89 +140,81 @@ Plain HTML, CSS and JavaScript. No framework, bundler, or ES modules. The JS fil
 
 **`Meter`** (`js/meter.js`)
 - `start(zone, nowMs)`: begins a shot from the given zone.
-- `stop(nowMs)`: ends the shot and returns `{ fill, made, points }`.
+- `stop(nowMs)`: consumes the shot and returns `{ fill, made, points }`, or `null` if inactive.
 - `isMake(fill)`: the make-window check (`METER.MAKE_MIN <= fill <= METER.MAKE_MAX`).
 - `isFull(nowMs)`, `isActive()`, `cancel()`, and `draw(ctx, nowMs, playerPos)`. The bar sits to the right of the player and flips to the left near the right edge.
-- Fill is computed from **wall-clock time** (`performance.now()`), not from frame `dt`.
+- Fill is computed from **monotonic elapsed time** (`performance.now()`), not from frame `dt`.
 
 **`GameState`** (`js/state.js`)
-- `startRound()`: resets the score and clock and sets the phase to `PLAYING`.
-- `tick(dt)`: counts the clock down. On the frame it hits 0, it sets the phase to `OVER`, updates `highScore`, and returns `true`.
+- `startRound(nowMs = performance.now())`: resets score, sets a deadline 60 seconds ahead, and enters `PLAYING`.
+- `tick(nowMs = performance.now())`: computes time remaining from the deadline. The first expired call enters `OVER`, updates `highScore`, and returns `true`; later calls return `false`.
 - `addPoints(n)`, `isPlaying()`, and read-only `phase` (`READY` / `PLAYING` / `OVER`), `score`, `highScore`, `timeLeft`.
 
 **`Ui`** (`js/ui.js`)
 - `updateHud()`, `hideScreens()`, `showEndScreen()`, and `onStart(callback)`, which wires both the Start Round and Play Again buttons.
 
 **`main.js`** (top-level functions, which are globals)
-- `handleClick()`: ignored unless a round is playing. Starts the meter with the zone at the player's current spot and freezes the player, or stops the meter and resolves the shot.
-- `resolveShot(result)`: unfreezes the player, adds points on a make, and sets the MAKE/MISS message.
+- `handleClick(now = performance.now())`: reconciles the deadline first, then ignores input unless a round is playing. Starts the meter with the zone at the player's current spot and freezes the player, or stops the meter and resolves the shot.
+- `resolveShot(result, now = performance.now())`: guards the deadline, unfreezes the player, awards a make once via the consumed meter, launches a cosmetic ball, and sets feedback.
 - `update(dt, now)`: ticks the clock (calling `endRound()` at 0), moves the player, and auto-resolves a full meter as a miss.
-- `startRound()` / `endRound()`: round transitions. `endRound()` throws away a shot still on the meter.
+- `startRound(now = performance.now())` / `endRound()`: round transitions; start resets player/mouse target, effects, audio voices, meter, and frame bookkeeping. `endRound()` throws away a shot still on the meter.
 - `render(now)`, `drawResult()`, and `frame(now)`, the `requestAnimationFrame` loop.
 
 ---
 
-## What to build next (priority order)
+## Remaining verification and submission work
 
-Items 1–3 are what's left of `SPEC.md` (priority 5, polish). They're ordered to match the spec's cut order: if time runs short, sound is cut first and the ball arc last.
-
-1. **Ball arc animation**: the ball travels from the player to the hoop after a shot. Note that points are currently added the instant the shot is decided, not when the ball arrives. Decide whether that should change, and how it interacts with the buzzer.
-2. **Make/miss effects**: e.g., the ball dropping through the net on a make, bouncing off the rim on a miss.
-3. **Sound effects.**
-
-   For items 1 and 2, commit `5d0f51b` (an older single-file `game.js`) has a working ball arc and drop/bounce effects that could be ported into the modules. It's not part of the current code, and it predates the module split.
-
-Hardening work. These aren't spec features, but the next person will want them:
-
-4. **Saved automated tests** for `Court.getZone`, `Meter.isMake`, and `GameState`. The checks behind the table above were run by hand in the console and aren't in the repo.
-5. **Cross-browser check** in Safari and Firefox (only Chrome has been tested).
-6. **Fix the timer trap** below (make the round clock use wall-clock time like the meter does).
+No implementation feature from `implements1.md` was cut. A human playthrough should check timing feel and listen to the audio volume; Safari/Firefox still need testing. The student must maintain `prompt_log2.md`, write the personal `HANDOFF_REPORT.md` without AI, and complete the assignment's submission steps. These documents are deliberately not generated here.
 
 ---
 
 ## Known bugs and traps
 
-- **The round clock and the meter use different time sources.** The clock adds up frame `dt`, and each frame's `dt` is capped at 0.05 s (`main.js`, `frame`). The meter uses `performance.now()`. Two consequences:
-  - Below about 20 frames per second, the round clock runs **slower than real time**, so a round lasts longer than 60 real seconds. The meter is unaffected.
-  - If you switch tabs or minimize the window, browsers pause `requestAnimationFrame`, so **the clock pauses** but **the meter keeps filling** in real time. Come back mid-shot and the meter is full, so the shot is a miss.
+- **Browser suspension delays rendering, not the deadline.** A late click is checked before it can score, and the first resumed frame ends an expired round. The small frame-delta cap affects movement only.
 - **No touch support.** Input is `mousemove` and `mousedown` only, so phones and tablets can't play.
 - **The player only follows while the mouse is over the court canvas.** If the mouse leaves the canvas, the player walks to the last spot the mouse was seen.
 - **Script order matters.** The files are plain scripts sharing the global scope. Adding a new file means adding a `<script>` tag in the right place in `index.html`. Loading a file before something it depends on fails with a `ReferenceError` in the console.
 - **`main.js` defines globals** (`canvas`, `ctx`, `update`, `render`, `handleClick`, `startRound`, `lastResult`, …). Don't reuse those names at the top level of another file. Note that `startRound` in `main.js` is different from `GameState.startRound`: the `main.js` version also resets the player and meter and hides the screens.
-- **Testing trap:** calling `update(dt, now)` in a loop fast-forwards the round clock but **not** the meter, because the meter reads real time. To test a fill level, pass a time to `Meter.stop`, e.g. `Meter.stop(performance.now() + 1350)` right after starting a 1.5 s meter gives 90%.
-- **The MAKE/MISS message has a fixed position** (near the top-left of the court) and can overlap the player or meter if you're standing there.
+- **Controlled-time tests:** pass consistent millisecond timestamps to `startRound`, `handleClick`, `update`, and `Meter.stop`. The first argument to `update` is movement delta in seconds; the second is the elapsed-time timestamp used by the clock and meter. The test bootstrap substitutes the clock only in test pages.
 - **Standing behind the backboard** (between the baseline and the hoop) counts as a 2-pointer. The spec doesn't cover this case.
-- **Git history:** commit `5d0f51b` contains an older single-file version (`game.js`) that was deleted in `870672f`. Don't treat it as current code.
+- **Git history:** the inherited README referenced `3b99bc3`, `5d0f51b`, and `870672f`; those commits are not in this repository's inherited history. The actual baseline is `4055f49`. Phase 2 extends that baseline directly.
 
 ---
 
 ## Where we cut corners, and why
 
-- **No automated tests or test runner.** The aim was a working core loop quickly. Every acceptance criterion was checked by running scripts in the browser console, but those scripts weren't saved. *Why:* time, and to avoid adding tooling before the game existed.
+- **Browser-only tests, no package tooling.** The new harness uses the real game scripts and controlled time, keeping direct-file startup and avoiding a dependency installation.
 - **Plain `<script>` tags and globals instead of ES modules or a bundler.** *Why:* browsers block ES modules on pages opened from `file://`, and the game has to run by double-clicking `index.html`. The cost is the load-order and global-name traps above.
-- **Polish (priority 5) skipped entirely.** *Why:* the spec puts it last and says to cut it first. An earlier version had an arc and effects, but they were left out of the rebuild to keep the foundation small.
+- **Cosmetic flight instead of physical scoring.** Make/miss remains determined by the inherited meter. Immediate scoring and input preserve the original risk/reward loop; animation never delays the buzzer.
 - **Judgment calls where the spec was silent:**
   - a start screen with a Start Round button, so the clock doesn't start the moment the page loads;
   - a shot still on the meter at the buzzer scores nothing;
   - points count the instant the shot is decided;
   - standing exactly on the half-court line is worth 3;
   - the court uses NBA dimensions (23.75 ft arc, 22 ft corners) so the three-point line has a real shape.
-- **The round clock is frame-based with a `dt` cap.** *Why:* simple and smooth. The cap stops a long pause from ending the round in one jump, at the cost of the timer trap above.
+- **One elapsed-time source.** Both meter and round use `performance.now()`. The deadline also runs through input handlers so delayed rendering cannot accept a late shot.
 - **The whole court is redrawn every frame**, with no caching. *Why:* simplest code, and it runs smoothly at this size.
-- **Only tested in Chrome.** *Why:* that's what was available in the build environment.
+- **Preserve the handoff.** Existing `Court`, `Player`, `Meter`, `GameState`, and `Ui` objects, plain-script architecture, court artwork, zones, and scoring rules remain. The small timing refactor replaces the clock accumulator with a deadline; feedback rendering moves to HTML. `SPEC.md` and both prompt logs are untouched. New ball/audio objects extend the original design. The baseline diff replaces/removes only 32 original code lines; this line-count check supplements the review of preserved behavior and architecture.
 
 ---
 
 ## Testing it yourself
 
-Every module is a global, so you can drive the game from the browser console after loading the page. For example:
+Open `tests/index.html` directly, or visit `/tests/index.html` on the local server. The report should show **21/21 checks passed**. Open `tests/audio.html` for **5/5 checks passed**. Reload the test page to rerun it, including the fresh-page high-score assertion. Neither page needs packages or a network connection.
+
+The game suite covers zone/meter boundaries, real DOM mouse events, scaled input, round deadlines at normal/low FPS and after stalls, buzzer-edge scoring, high scores, repeated restart, flight lifecycle, mute, and feedback placement. The separate audio page uses mocked browser APIs to exercise absence, construction failure, resume rejection, successful scheduling, and mute. These checks do not replace listening to actual speakers.
+
+Open `tests/visual.html` for a deterministic mid-flight preview. Its frozen clock is intentional; play the actual `index.html` for a normal round. Chrome screenshots of the title screen and mid-flight scene were inspected, and both test reports passed through direct-file and HTTP launch.
+
+For a controlled console example on the normal game page, run this entire block together:
 
 ```js
-GameState.startRound();                       // or click Start Round
-Court.getZone(30, 25).points;                 // 3
-Meter.isMake(0.85);                           // true
+const demoNow = performance.now();
+startRound(demoNow);                         // resets all round state
 Player.position.x = 30; Player.position.y = 25;
-handleClick();                                // start a 3-point shot (1.5 s meter)
-resolveShot(Meter.stop(performance.now() + 1350));  // stop at 90% -> make, +3
-GameState.score;                              // 3
+handleClick(demoNow);                        // starts a 3-point, 1.5 s meter
+handleClick(demoNow + 1350);                  // 90% -> make, +3
+GameState.score;                             // 3
 ```
+
+Use the saved harness for sustained time simulation: a normal game page continues receiving real animation frames.

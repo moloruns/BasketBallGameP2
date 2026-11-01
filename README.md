@@ -186,22 +186,6 @@ All planned implementation features are complete. A human playthrough should che
 
 ---
 
-## Where we cut corners, and why
-
-- **Browser-only tests, no package tooling.** The new harness uses the real game scripts and controlled time, keeping direct-file startup and avoiding a dependency installation.
-- **Plain `<script>` tags and globals instead of ES modules or a bundler.** *Why:* browsers block ES modules on pages opened from `file://`, and the game has to run by double-clicking `index.html`. The cost is the load-order and global-name traps above.
-- **Cosmetic flight instead of physical scoring.** Make/miss remains determined by the inherited meter. Immediate scoring and input preserve the original risk/reward loop; animation never delays the buzzer.
-- **Judgment calls where the spec was silent:**
-  - a start screen with a Start Round button, so the clock doesn't start the moment the page loads;
-  - a shot still on the meter at the buzzer scores nothing;
-  - points count the instant the shot is decided;
-  - standing exactly on the half-court line is worth 3;
-  - the court uses NBA dimensions (23.75 ft arc, 22 ft corners) so the three-point line has a real shape.
-- **One elapsed-time source.** Both meter and round use `performance.now()`. The deadline also runs through input handlers so delayed rendering cannot accept a late shot.
-- **The whole court is redrawn every frame**, with no caching. *Why:* simplest code, and it runs smoothly at this size.
-- **Preserve the handoff.** Existing `Court`, `Player`, `Meter`, `GameState`, and `Ui` objects, plain-script architecture, court artwork, zones, and scoring rules remain. The small timing refactor replaces the clock accumulator with a deadline; feedback rendering moves to HTML. `SPEC.md` and both prompt logs are untouched. New ball/audio objects extend the original design. The original court, meter decision, scoring rules, and object architecture remain intact; selectable controls adapt gestures to the existing shot flow.
-
----
 
 ## Testing it yourself
 

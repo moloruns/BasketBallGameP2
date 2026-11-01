@@ -169,7 +169,7 @@ Plain HTML, CSS and JavaScript. No framework, bundler, or ES modules. The JS fil
 
 ## Remaining verification and submission work
 
-No implementation feature from `implements1.md` was cut. A human playthrough should check timing feel and listen to the audio volume; Safari/Firefox still need testing. The student must maintain `prompt_log2.md`, write the personal `HANDOFF_REPORT.md` without AI, and complete the assignment's submission steps. These documents are deliberately not generated here.
+All planned implementation features are complete. A human playthrough should check timing feel and listen to the audio volume; Safari/Firefox still need testing. The student must maintain `prompt_log2.md`, write the personal `HANDOFF_REPORT.md` without AI, and complete the assignment's submission steps. These documents are deliberately not generated here.
 
 ---
 

@@ -202,6 +202,95 @@ test('Result feedback has reserved space outside the court', () => {
   assert(!document.getElementById('shot-feedback').textContent.includes('MAKE'),'stale message');
 });
 
+function chooseMode(mode, id = 'shooting-mode') {
+  const select = document.getElementById(id);
+  select.value = mode; select.dispatchEvent(new Event('change'));
+}
+function space(type, options = {}, target = canvas) {
+  const event = new KeyboardEvent(type, { code: 'Space', key: ' ', bubbles: true, cancelable: true, ...options });
+  target.dispatchEvent(event); return event;
+}
+function releaseMouse() { window.dispatchEvent(new MouseEvent('mouseup', { button: 0 })); }
+
+test('Mode selectors sync and changes take effect at the next round', () => {
+  chooseMode('mouse-hold'); fresh(); assert(ShotInput.mode==='mouse-hold','selected mode');
+  assert(document.getElementById('again-shooting-mode').value==='mouse-hold','replay selection');
+  chooseMode('space-hold','again-shooting-mode'); assert(ShotInput.mode==='mouse-hold','current round unchanged');
+  fresh(); assert(ShotInput.mode==='space-hold','next round selection');
+  chooseMode('click'); fresh();
+});
+
+test('Two-click mode ignores mouse release and Space', () => {
+  chooseMode('click'); fresh(); space('keydown'); assert(!Meter.isActive(),'Space ignored');
+  mouseClick(); releaseMouse(); assert(Meter.isActive(),'mouseup is not a shot');
+  window.testClock=2350; mouseClick(); equal(GameState.score,3,'second click shoots');
+});
+
+test('Hold LMB releases outside canvas and ignores keyboard/right-button release', () => {
+  chooseMode('mouse-hold'); fresh(); mouseClick();
+  space('keydown'); space('keyup'); assert(Meter.isActive(),'keyboard ignored');
+  window.dispatchEvent(new MouseEvent('mouseup',{button:2})); assert(Meter.isActive(),'right release ignored');
+  window.testClock=2350; releaseMouse(); equal(GameState.score,3,'window release shoots');
+  releaseMouse(); equal(GameState.score,3,'duplicate release ignored'); assert(!Meter.isActive(),'no new meter');
+});
+
+test('Hold Space prevents scrolling, ignores repeats/mouse, and fires on keyup', () => {
+  chooseMode('space-hold'); fresh(); mouseClick(); assert(!Meter.isActive(),'mouse ignored');
+  const pressEvent=space('keydown'); assert(pressEvent.defaultPrevented && Meter.isActive(),'space starts and prevents scroll');
+  window.testClock=2000; space('keydown',{repeat:true}); mouseClick(); releaseMouse();
+  equal(GameState.score,0,'repeat and mouse did not release'); assert(Meter.isActive(),'still charging');
+  window.testClock=2350; assert(space('keyup').defaultPrevented,'release prevents default');
+  equal(GameState.score,3,'key release shoots'); space('keyup'); assert(!Meter.isActive(),'duplicate release inert');
+});
+
+test('Holding through full meter auto-misses once and release cannot restart it', () => {
+  for(const mode of ['mouse-hold','space-hold']) {
+    chooseMode(mode); fresh(); if(mode==='mouse-hold') mouseClick(); else space('keydown');
+    advance(2500); equal(GameState.score,0,'full miss'); assert(lastResult.text==='MISS','miss feedback');
+    if(mode==='mouse-hold') releaseMouse(); else { space('keydown',{repeat:true}); space('keyup'); }
+    assert(!Meter.isActive(),'release must not restart'); equal(Ball.count,1,'one outcome');
+  }
+});
+
+test('Both hold modes honor releases before, at and after the deadline', () => {
+  for(const mode of ['mouse-hold','space-hold']) for(const release of [60999,61000,61001]) {
+    chooseMode(mode); fresh(); window.testClock=release-1350;
+    if(mode==='mouse-hold') mouseClick(); else space('keydown');
+    window.testClock=release; if(mode==='mouse-hold') releaseMouse(); else space('keyup');
+    equal(GameState.score,release<61000?3:0,'buzzer score '+mode);
+    assert(!Meter.isActive(),'resolved or discarded');
+  }
+});
+
+test('Losing focus cancels a held shot and its stale release', () => {
+  for(const mode of ['mouse-hold','space-hold']) {
+    chooseMode(mode); fresh(); if(mode==='mouse-hold') mouseClick(); else space('keydown');
+    window.dispatchEvent(new Event('blur')); assert(!Meter.isActive(),'cancelled');
+    move(60,35); Player.update(1); assert(Player.position.x>50,'movement unlocked');
+    window.testClock=2350; if(mode==='mouse-hold') releaseMouse(); else space('keyup');
+    equal(GameState.score,0,'stale release cannot score'); assert(!Meter.isActive(),'stale release cannot charge');
+  }
+});
+
+test('Space preserves button keyboard interaction; round start focuses the court', () => {
+  chooseMode('space-hold'); fresh(); assert(document.activeElement===canvas,'court focused');
+  document.getElementById('mute-button').focus();
+  const event=space('keydown',{},document.getElementById('mute-button'));
+  assert(!event.defaultPrevented && !Meter.isActive(),'button Space not stolen');
+  mouseClick(); assert(document.activeElement===canvas,'court click restores keyboard focus');
+  space('keydown',{},document.activeElement); assert(Meter.isActive(),'Space works after returning from button');
+  window.testClock=2350; space('keyup'); equal(GameState.score,3,'shoot after restoring focus');
+});
+
+test('Restart clears old holds and remembers the selected control mode', () => {
+  chooseMode('space-hold'); fresh(); space('keydown'); fresh();
+  space('keyup'); assert(!Meter.isActive(),'old release ignored'); assert(ShotInput.mode==='space-hold','selection retained');
+  space('keydown'); window.testClock=2350; space('keyup'); equal(GameState.score,3,'new round works');
+  render(2350); advance(4000); render(4000);
+  assert(document.getElementById('shot-feedback').textContent.includes('Hold Space'),'mode-specific hint');
+  chooseMode('click'); fresh();
+});
+
 const report=document.createElement('pre'); report.id='test-results';
 report.textContent=testResults.join('\n')+`\n\n${testResults.length-testFailures}/${testResults.length} checks passed.`;
 document.body.append(report); document.body.dataset.testStatus=testFailures?'failed':'passed';

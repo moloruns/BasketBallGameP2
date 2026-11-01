@@ -2,11 +2,11 @@
 
 **Original author: Atin Mathur** ([atinm12](https://github.com/atinm12)). Phase 2 extends the inherited game from baseline `4055f49` in [BasketBallGameP2](https://github.com/moloruns/BasketBallGameP2).
 
-A top-down basketball shooting game that runs in a web browser. Walk a player around the court with the mouse, click to start a shot meter, and click again as close to the 90% line as you can. You have 60 seconds to score as many points as possible.
+A top-down basketball shooting game that runs in a web browser. Walk a player around the court with the mouse, choose two-click mouse controls or hold/release with LMB or Space, and stop the shot meter as close to the 90% line as you can. You have 60 seconds to score as many points as possible.
 
 `SPEC.md` is the source of truth for what the game should do. This README describes what the code does **right now**.
 
-**Status:** All five SPEC priorities are implemented. Phase 2 fixes elapsed-time deadlines and restart input, adds ball arcs, make/miss finishes, synthesized sound with mute, and moves shot feedback above the court. Saved browser checks pass: **21 game checks + 5 audio checks**. Browser coverage and remaining human checks are described below.
+**Status:** All five SPEC priorities are implemented. Phase 2 fixes elapsed-time deadlines and restart input, adds ball arcs, make/miss finishes, synthesized sound with mute, and moves shot feedback above the court. Saved browser checks pass: **30 game checks + 5 audio checks**. Browser coverage and remaining human checks are described below.
 
 ---
 
@@ -38,8 +38,10 @@ Then open http://localhost:8000.
 |---|---|
 | Start a round | Click **Start Round** (or **Play Again** on the end screen) |
 | Move | Move the mouse over the court. The player follows it. |
-| Start a shot | Left-click on the court. The shot meter appears next to the player. |
-| Shoot | Left-click again while the meter is filling. |
+| Choose controls | Select a mode before **Start Round** or **Play Again**; the choice carries between rounds. |
+| Mouse: click twice (default) | Left-click on the court to charge; left-click again to shoot. |
+| Mouse: hold and release LMB | Hold the left mouse button on the court to charge; release to shoot, even outside the court. |
+| Keyboard: hold and release Space | Hold Space to charge; release to shoot. Mouse movement still positions the player. |
 | Mute/unmute | Click **Sound: on/off** above the court. The setting survives round restarts. |
 
 **What a player needs to know**
@@ -48,7 +50,7 @@ Then open http://localhost:8000.
 - **Make window:** stopping the bar anywhere from **85% to 95%** (inclusive) is a make. Below 85% or above 95% is a miss.
 - If the bar fills all the way without a second click, it's a **miss**.
 - After each shot, **MAKE +N** or **MISS** appears in a reserved bar above the court for about a second.
-- Shot value depends on where you're standing **when you click to start the meter**:
+- Shot value depends on where you're standing **when you start the meter**:
 
   | Where | Points | Meter fill time |
   |---|---|---|
@@ -56,6 +58,8 @@ Then open http://localhost:8000.
   | On or outside the three-point line, up to and including the half-court line | 3 | 1.5 s |
   | Past half court | 4 | 0.5 s |
 
+- Each mode starts the shot from the player’s current position, not an unreached cursor location. Only the selected shooting input is active during the round. Holding past 100% auto-misses once; releasing afterward cannot start another shot.
+- Losing focus or hiding the tab cancels a held shot without awarding points and restores movement. The round clock continues; two-click shots retain the existing elapsed-time behavior.
 - You always shoot at the **left** hoop. The right hoop is dimmed and does nothing.
 - You can't move while the meter is filling. You can move again as soon as the shot is decided.
 - The 60-second clock **keeps running** while the meter fills, so slow shots cost time.
@@ -68,7 +72,7 @@ Then open http://localhost:8000.
 
 ## Acceptance criteria status
 
-Every numbered criterion from `SPEC.md` is assessed below using the saved browser checks, source inspection, and Chrome screenshots. “Met” describes implemented behavior with this evidence, not coverage of every browser. Rules are checked with controlled timestamps and synthetic mouse/button events.
+Every numbered criterion from `SPEC.md` is assessed below using the saved browser checks, source inspection, and Chrome screenshots. “Met” describes implemented behavior with this evidence, not coverage of every browser. Rules are checked with controlled timestamps and synthetic mouse/button/key events. The original two-click controls remain the default for the numbered spec criteria; the optional hold modes are a user-requested extension.
 
 | # | Criterion (short form) | Status | Notes |
 |---|---|---|---|
@@ -124,6 +128,7 @@ Plain HTML, CSS and JavaScript. No framework, bundler, or ES modules. The JS fil
 | `js/audio.js` | `Sound`: optional synthesized effects, user-gesture unlock, mute, and voice cleanup. |
 | `tests/` | Browser regression harness, isolated audio checks, and a deterministic flight preview. |
 | `js/ui.js` | `Ui`: updating the HTML score/feedback bars, mute control, and start/end screens. |
+| `js/input.js` | `ShotInput`: selected shooting mode, held-input tracking, keyboard events, window releases, and focus-loss cleanup. |
 | `js/main.js` | Entry point: canvas setup, the click → meter → result flow, round start and end, and the game loop. |
 
 ### Major functions
@@ -171,7 +176,7 @@ No implementation feature from `implements1.md` was cut. A human playthrough sho
 ## Known bugs and traps
 
 - **Browser suspension delays rendering, not the deadline.** A late click is checked before it can score, and the first resumed frame ends an expired round. The small frame-delta cap affects movement only.
-- **No touch support.** Input is `mousemove` and `mousedown` only, so phones and tablets can't play.
+- **No touch support.** Movement requires a mouse; shooting uses mouse buttons or Space. Phones and tablets cannot play with touch alone.
 - **The player only follows while the mouse is over the court canvas.** If the mouse leaves the canvas, the player walks to the last spot the mouse was seen.
 - **Script order matters.** The files are plain scripts sharing the global scope. Adding a new file means adding a `<script>` tag in the right place in `index.html`. Loading a file before something it depends on fails with a `ReferenceError` in the console.
 - **`main.js` defines globals** (`canvas`, `ctx`, `update`, `render`, `handleClick`, `startRound`, `lastResult`, …). Don't reuse those names at the top level of another file. Note that `startRound` in `main.js` is different from `GameState.startRound`: the `main.js` version also resets the player and meter and hides the screens.
@@ -194,15 +199,15 @@ No implementation feature from `implements1.md` was cut. A human playthrough sho
   - the court uses NBA dimensions (23.75 ft arc, 22 ft corners) so the three-point line has a real shape.
 - **One elapsed-time source.** Both meter and round use `performance.now()`. The deadline also runs through input handlers so delayed rendering cannot accept a late shot.
 - **The whole court is redrawn every frame**, with no caching. *Why:* simplest code, and it runs smoothly at this size.
-- **Preserve the handoff.** Existing `Court`, `Player`, `Meter`, `GameState`, and `Ui` objects, plain-script architecture, court artwork, zones, and scoring rules remain. The small timing refactor replaces the clock accumulator with a deadline; feedback rendering moves to HTML. `SPEC.md` and both prompt logs are untouched. New ball/audio objects extend the original design. The baseline diff replaces/removes only 32 original code lines; this line-count check supplements the review of preserved behavior and architecture.
+- **Preserve the handoff.** Existing `Court`, `Player`, `Meter`, `GameState`, and `Ui` objects, plain-script architecture, court artwork, zones, and scoring rules remain. The small timing refactor replaces the clock accumulator with a deadline; feedback rendering moves to HTML. `SPEC.md` and both prompt logs are untouched. New ball/audio objects extend the original design. The original court, meter decision, scoring rules, and object architecture remain intact; selectable controls adapt gestures to the existing shot flow.
 
 ---
 
 ## Testing it yourself
 
-Open `tests/index.html` directly, or visit `/tests/index.html` on the local server. The report should show **21/21 checks passed**. Open `tests/audio.html` for **5/5 checks passed**. Reload the test page to rerun it, including the fresh-page high-score assertion. Neither page needs packages or a network connection.
+Open `tests/index.html` directly, or visit `/tests/index.html` on the local server. The report should show **30/30 checks passed**. Open `tests/audio.html` for **5/5 checks passed**. Reload the test page to rerun it, including the fresh-page high-score assertion. Neither page needs packages or a network connection.
 
-The game suite covers zone/meter boundaries, real DOM mouse events, scaled input, round deadlines at normal/low FPS and after stalls, buzzer-edge scoring, high scores, repeated restart, flight lifecycle, mute, and feedback placement. The separate audio page uses mocked browser APIs to exercise absence, construction failure, resume rejection, successful scheduling, and mute. These checks do not replace listening to actual speakers.
+The game suite covers zone/meter boundaries, real DOM mouse events, scaled input, round deadlines at normal/low FPS and after stalls, buzzer-edge scoring, high scores, repeated restart, flight lifecycle, mute, and feedback placement. Nine additional control checks exercise mode selection, all three gestures, repeated keys, wrong-input isolation, outside-canvas releases, full-meter and buzzer boundaries, focus loss, button accessibility, and stale releases across restart. The separate audio page uses mocked browser APIs to exercise absence, construction failure, resume rejection, successful scheduling, and mute. These checks do not replace listening to actual speakers.
 
 Open `tests/visual.html` for a deterministic mid-flight preview. Its frozen clock is intentional; play the actual `index.html` for a normal round. Chrome screenshots of the title screen and mid-flight scene were inspected, and both test reports passed through direct-file and HTTP launch.
 

@@ -46,6 +46,7 @@ function update(dt, now) {
 }
 
 function startRound(now = performance.now()) {
+  ShotInput.setMode(Ui.getMode());
   GameState.startRound(now);
   lastFrameMs = now;
   Player.reset();
@@ -54,12 +55,14 @@ function startRound(now = performance.now()) {
   Sound.stopAll();
   lastResult = null;
   Ui.hideScreens();
+  canvas.focus({ preventScroll: true });
   Ui.showResult(null);
   Ui.updateHud();
 }
 
 // A shot whose meter is still filling at the buzzer is thrown away and scores nothing.
 function endRound() {
+  ShotInput.reset();
   Meter.cancel();
   Player.setFrozen(false);
   Sound.stopAll();
@@ -90,7 +93,8 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-Player.attachInput(canvas, handleClick);
+ShotInput.attach(handleClick);
+Player.attachInput(canvas, () => ShotInput.press('mouse'));
 Ui.onStart(() => { Sound.unlock(); startRound(); });
 Ui.onMute(() => { Sound.unlock(); Sound.setMuted(!Sound.muted); Ui.updateMute(); });
 requestAnimationFrame(frame);

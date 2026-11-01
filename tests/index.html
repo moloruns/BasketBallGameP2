@@ -20,19 +20,24 @@
     </div>
 
     <div id="stage">
-      <canvas id="court"></canvas>
+      <canvas id="court" tabindex="0" aria-label="Basketball court"></canvas>
 
       <div id="start-screen" class="overlay">
         <div class="card">
           <h1>Buzzer Beater</h1>
-          <p>Move your player with the mouse. <strong>Click</strong> to start the shot meter,
-             then <strong>click again</strong> as close to the white line as you can.</p>
+          <p>Move with the mouse. Choose how to shoot, then stop the meter near the white line.</p>
           <ul class="zones">
             <li><span class="chip">2 PT</span> Inside the three-point line &middot; 3.0s meter</li>
             <li><span class="chip">3 PT</span> Three-point line to half court &middot; 1.5s meter</li>
             <li><span class="chip">4 PT</span> Beyond half court &middot; 0.5s meter</li>
           </ul>
           <p class="small">Score as much as you can in 60 seconds.</p>
+          <label class="mode-label" for="shooting-mode">Shooting controls</label>
+          <select id="shooting-mode" class="mode-select">
+            <option value="click">Mouse: click twice</option>
+            <option value="mouse-hold">Mouse: hold and release LMB</option>
+            <option value="space-hold">Keyboard: hold and release Space</option>
+          </select>
           <button id="start-button">Start Round</button>
         </div>
       </div>
@@ -44,6 +49,12 @@
             <div><span class="label">Score</span><span id="final-score">0</span></div>
             <div><span class="label">High Score</span><span id="final-high">0</span></div>
           </div>
+          <label class="mode-label" for="again-shooting-mode">Shooting controls</label>
+          <select id="again-shooting-mode" class="mode-select">
+            <option value="click">Mouse: click twice</option>
+            <option value="mouse-hold">Mouse: hold and release LMB</option>
+            <option value="space-hold">Keyboard: hold and release Space</option>
+          </select>
           <button id="again-button">Play Again</button>
         </div>
       </div>
@@ -61,6 +72,7 @@
   <script src="../js/audio.js"></script>
   <script src="../js/ball.js"></script>
   <script src="../js/ui.js"></script>
+  <script src="../js/input.js"></script>
   <script src="../js/main.js"></script>
 <script src="checks.js"></script></body>
 </html>

@@ -15,7 +15,11 @@ const Player = (() => {
       mouse.y = Court.toFt((e.clientY - r.top) * (canvas.height / r.height));
     });
     canvas.addEventListener('mousedown', e => {
-      if (e.button === 0) onClick();
+      if (e.button === 0) {
+        e.preventDefault();
+        canvas.focus({ preventScroll: true });
+        onClick();
+      }
     });
   }
 

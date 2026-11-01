@@ -14,7 +14,16 @@ const Ui = (() => {
     againButton: document.getElementById('again-button'),
     feedback: document.getElementById('shot-feedback'),
     muteButton: document.getElementById('mute-button'),
+    mode: document.getElementById('shooting-mode'),
+    againMode: document.getElementById('again-shooting-mode'),
   };
+
+  // Keep both pre-round selectors in sync; the active round snapshots this value.
+  for (const select of [el.mode, el.againMode]) {
+    select.addEventListener('change', () => {
+      el.mode.value = el.againMode.value = select.value;
+    });
+  }
 
   function onStart(callback) {
     el.startButton.addEventListener('click', callback);
@@ -40,7 +49,7 @@ const Ui = (() => {
   }
 
   function showResult(result) {
-    const message = result ? result.text : 'Shoot at the left hoop · Release near the white line';
+    const message = result ? result.text : ShotInput.hint;
     if (el.feedback.textContent !== message) el.feedback.textContent = message;
     el.feedback.style.color = result ? result.color : '';
   }
@@ -51,5 +60,5 @@ const Ui = (() => {
     el.muteButton.setAttribute('aria-pressed', String(Sound.muted));
   }
 
-  return { onStart, updateHud, hideScreens, showEndScreen, showResult, onMute, updateMute };
+  return { getMode: () => el.mode.value, onStart, updateHud, hideScreens, showEndScreen, showResult, onMute, updateMute };
 })();

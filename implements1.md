@@ -133,3 +133,11 @@ Implemented all planned code changes; no spec polish was cut. Core fixes are in 
 Verification: 21 game checks and 5 isolated audio checks pass in Chrome via direct files and HTTP. Title and flight screenshots were inspected. Safari automation was unavailable because remote automation is disabled; Firefox is not installed. Human playtesting and listening to the sound levels remain recommended. Checked sound tasks indicate implementation and automated API coverage, not a listening test.
 
 The existing architecture and substantive gameplay remain; `SPEC.md`, `prompt_log.md`, and `prompt_log2.md` were not edited. The student remains responsible for their prompt log, personal handoff report, and final course submission. Implementation is committed locally. `git push origin main` was attempted but Git could not read a GitHub username because credentials are unavailable in this session. The final push checkbox remains open; publish the local commits with a signed-in GitHub client.
+
+## Additional requested refinement: selectable shooting controls
+
+- [x] Offer two-click mouse (default), hold/release LMB, and hold/release Space before the first round and each replay; remember the selection between rounds.
+- [x] Keep movement, shot origin, meter speeds, make window, and buzzer rules shared across modes. Start shots at the player's position.
+- [x] Ignore unrelated inputs and repeated keydown events, prevent Space scrolling during play, support mouse release outside the canvas, and prevent stale releases after auto-misses/restarts.
+- [x] Cancel held shots on focus loss or hidden tabs while allowing the round deadline to continue. Keep keyboard interaction with UI buttons available.
+- [x] Add nine control regression checks (30 game checks total), synchronize test fixtures, and document the new controls. Preserve the original spec and user-owned logs.

@@ -26,6 +26,7 @@ const Meter = (() => {
 
   // Stops the meter and returns the shot result: { fill, made, points }
   function stop(nowMs) {
+    if (!isActive()) return null; // A resolved shot cannot be awarded twice.
     const fill = fillAt(nowMs);
     const result = { fill, made: isMake(fill), points: zone.points };
     zone = null;

@@ -8,11 +8,11 @@ const ctx = canvas.getContext('2d');
 
 let lastResult = null;   // { text, color, age } for the "MAKE" / "MISS" message
 
-function handleClick() {
+function handleClick(now = performance.now()) {
+  if (GameState.tick(now)) endRound();
   if (!GameState.isPlaying()) return;
-  const now = performance.now();
   if (Meter.isActive()) {
-    resolveShot(Meter.stop(now));
+    resolveShot(Meter.stop(now), now);
   } else {
     // The zone is fixed here, at the moment the meter starts
     Meter.start(Court.getZone(Player.position.x, Player.position.y), now);
@@ -20,7 +20,9 @@ function handleClick() {
   }
 }
 
-function resolveShot(result) {
+function resolveShot(result, now = performance.now()) {
+  if (GameState.tick(now)) endRound();
+  if (!result || !GameState.isPlaying()) return;
   Player.setFrozen(false);
   if (result.made) GameState.addPoints(result.points);
   lastResult = result.made
@@ -29,10 +31,10 @@ function resolveShot(result) {
 }
 
 function update(dt, now) {
-  if (GameState.tick(dt)) endRound();
+  if (GameState.tick(now)) endRound();
   if (GameState.isPlaying()) {
     Player.update(dt);
-    if (Meter.isActive() && Meter.isFull(now)) resolveShot(Meter.stop(now));
+    if (Meter.isActive() && Meter.isFull(now)) resolveShot(Meter.stop(now), now);
   }
   if (lastResult) {
     lastResult.age += dt;
@@ -40,8 +42,9 @@ function update(dt, now) {
   }
 }
 
-function startRound() {
-  GameState.startRound();
+function startRound(now = performance.now()) {
+  GameState.startRound(now);
+  lastFrameMs = now;
   Player.reset();
   Meter.cancel();
   lastResult = null;
@@ -86,5 +89,5 @@ function frame(now) {
 }
 
 Player.attachInput(canvas, handleClick);
-Ui.onStart(startRound);
+Ui.onStart(() => startRound());
 requestAnimationFrame(frame);

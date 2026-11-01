@@ -6,18 +6,21 @@ const GameState = (() => {
   let score = 0;
   let highScore = 0;
   let timeLeft = ROUND_SECONDS;
+  let deadlineMs = 0;
 
-  function startRound() {
+  function startRound(nowMs = performance.now()) {
+    deadlineMs = nowMs + ROUND_SECONDS * 1000;
     phase = 'PLAYING';
     score = 0;
     timeLeft = ROUND_SECONDS;
   }
 
-  // Counts the clock down. Returns true on the frame the round runs out of time,
+  // Uses the same monotonic clock as the meter, even after a suspended frame.
+  // Returns true once when the round runs out of time,
   // after updating the high score.
-  function tick(dt) {
+  function tick(nowMs = performance.now()) {
     if (phase !== 'PLAYING') return false;
-    timeLeft = Math.max(0, timeLeft - dt);
+    timeLeft = Math.max(0, Math.min(ROUND_SECONDS, (deadlineMs - nowMs) / 1000));
     if (timeLeft > 0) return false;
     phase = 'OVER';
     highScore = Math.max(highScore, score);
@@ -25,7 +28,7 @@ const GameState = (() => {
   }
 
   function addPoints(points) {
-    score += points;
+    if (phase === 'PLAYING') score += points;
   }
 
   return {

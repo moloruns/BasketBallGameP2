@@ -32,6 +32,8 @@ const Player = (() => {
   function reset() {
     position.x = PLAYER.START_X_FT;
     position.y = PLAYER.START_Y_FT;
+    mouse.x = position.x;
+    mouse.y = position.y;
     frozen = false;
   }
 

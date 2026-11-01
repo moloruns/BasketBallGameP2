@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Buzzer Beater regression checks</title>
+  <link rel="stylesheet" href="../style.css">
+<style>body{display:block;padding:16px}#app{margin:auto}#test-results{white-space:pre-wrap;line-height:1.6;max-width:1082px;margin:24px auto}</style></head>
+<body>
+  <div id="app">
+    <header id="hud">
+      <div class="stat"><span class="label">Score</span><span id="score">0</span></div>
+      <div class="stat"><span class="label">Time</span><span id="time">1:00</span></div>
+      <div class="stat"><span class="label">High Score</span><span id="high">0</span></div>
+    </header>
+
+    <div id="stage">
+      <canvas id="court"></canvas>
+
+      <div id="start-screen" class="overlay">
+        <div class="card">
+          <h1>Buzzer Beater</h1>
+          <p>Move your player with the mouse. <strong>Click</strong> to start the shot meter,
+             then <strong>click again</strong> as close to the white line as you can.</p>
+          <ul class="zones">
+            <li><span class="chip">2 PT</span> Inside the three-point line &middot; 3.0s meter</li>
+            <li><span class="chip">3 PT</span> Three-point line to half court &middot; 1.5s meter</li>
+            <li><span class="chip">4 PT</span> Beyond half court &middot; 0.5s meter</li>
+          </ul>
+          <p class="small">Score as much as you can in 60 seconds.</p>
+          <button id="start-button">Start Round</button>
+        </div>
+      </div>
+
+      <div id="end-screen" class="overlay hidden">
+        <div class="card">
+          <h1>Time's Up!</h1>
+          <div class="results">
+            <div><span class="label">Score</span><span id="final-score">0</span></div>
+            <div><span class="label">High Score</span><span id="final-high">0</span></div>
+          </div>
+          <button id="again-button">Play Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plain scripts (not ES modules) so the game opens straight from the file system.
+       Order matters: each file uses the ones above it. -->
+  <script src="bootstrap.js"></script>
+  <script src="../js/constants.js"></script>
+  <script src="../js/court.js"></script>
+  <script src="../js/player.js"></script>
+  <script src="../js/meter.js"></script>
+  <script src="../js/state.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/main.js"></script>
+<script src="checks.js"></script></body>
+</html>

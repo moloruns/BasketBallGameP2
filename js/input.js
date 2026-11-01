@@ -5,7 +5,7 @@ const ShotInput = (() => {
   let onShot;
   const hints = {
     click: 'Click to charge · Click again near the white line',
-    'mouse-hold': 'Hold LMB to charge · Release near the white line',
+    'mouse-hold': 'Hold mouse button to charge · Release near the white line',
     'space-hold': 'Hold Space to charge · Release near the white line',
   };
 

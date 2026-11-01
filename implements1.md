@@ -136,7 +136,7 @@ The existing architecture and substantive gameplay remain; `SPEC.md`, `prompt_lo
 
 ## Additional requested refinement: selectable shooting controls
 
-- [x] Offer two-click mouse (default), hold/release LMB, and hold/release Space before the first round and each replay; remember the selection between rounds.
+- [x] Offer two-click mouse (default), hold/release mouse button, and hold/release Space before the first round and each replay; remember the selection between rounds.
 - [x] Keep movement, shot origin, meter speeds, make window, and buzzer rules shared across modes. Start shots at the player's position.
 - [x] Ignore unrelated inputs and repeated keydown events, prevent Space scrolling during play, support mouse release outside the canvas, and prevent stale releases after auto-misses/restarts.
 - [x] Cancel held shots on focus loss or hidden tabs while allowing the round deadline to continue. Keep keyboard interaction with UI buttons available.

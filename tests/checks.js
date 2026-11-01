@@ -226,7 +226,7 @@ test('Two-click mode ignores mouse release and Space', () => {
   window.testClock=2350; mouseClick(); equal(GameState.score,3,'second click shoots');
 });
 
-test('Hold LMB releases outside canvas and ignores keyboard/right-button release', () => {
+test('Hold mouse button releases outside canvas and ignores keyboard/right-button release', () => {
   chooseMode('mouse-hold'); fresh(); mouseClick();
   space('keydown'); space('keyup'); assert(Meter.isActive(),'keyboard ignored');
   window.dispatchEvent(new MouseEvent('mouseup',{button:2})); assert(Meter.isActive(),'right release ignored');

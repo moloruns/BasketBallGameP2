@@ -2,7 +2,7 @@
 
 **Original author: Atin Mathur** ([atinm12](https://github.com/atinm12)). Phase 2 extends the inherited game from baseline `4055f49` in [BasketBallGameP2](https://github.com/moloruns/BasketBallGameP2).
 
-A top-down basketball shooting game that runs in a web browser. Walk a player around the court with the mouse, choose two-click mouse controls or hold/release with LMB or Space, and stop the shot meter as close to the 90% line as you can. You have 60 seconds to score as many points as possible.
+A top-down basketball shooting game that runs in a web browser. Walk a player around the court with the mouse, choose two-click mouse controls or hold/release with mouse button or Space, and stop the shot meter as close to the 90% line as you can. You have 60 seconds to score as many points as possible.
 
 `SPEC.md` is the source of truth for what the game should do. This README describes what the code does **right now**.
 
@@ -40,7 +40,7 @@ Then open http://localhost:8000.
 | Move | Move the mouse over the court. The player follows it. |
 | Choose controls | Select a mode before **Start Round** or **Play Again**; the choice carries between rounds. |
 | Mouse: click twice (default) | Left-click on the court to charge; left-click again to shoot. |
-| Mouse: hold and release LMB | Hold the left mouse button on the court to charge; release to shoot, even outside the court. |
+| Mouse: hold and release mouse button | Hold the left mouse button on the court to charge; release to shoot, even outside the court. |
 | Keyboard: hold and release Space | Hold Space to charge; release to shoot. Mouse movement still positions the player. |
 | Mute/unmute | Click **Sound: on/off** above the court. The setting survives round restarts. |
 
